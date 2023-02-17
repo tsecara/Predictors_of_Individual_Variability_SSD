@@ -1,1 +1,149 @@
+#find Resting State time series files 
+files_RS_resid_ts <- list.files(path=".", recursive = T, full.names = F, pattern="^sub.*_RS_2mm_GSR_glasser_tian_meants\\.csv$")
+
+#confirm that csvs aren't empty 
+files_RS_resid_ts[file.size(files_RS_resid_ts)==0]
+
+#create list of IDS
+ptlist <-paste("SPN01", substring(files_RS_resid_ts, 5, 7), substring(files_RS_resid_ts, 8, 11), sep = "_")
+
+#read in time series files 
+resid_ts <- lapply(files_RS_resid_ts, read.csv, header= F)
+
+#transpose dfs (swapping the rows with the columns and the columns with the row, to put in the correct format to be in a matrix)
+resid_ts <-lapply(resid_ts, t)
+
+#Name dfs with participant IDS
+names(resid_ts) <-ptlist 
+
+install.packages("rdist")
+library(rdist)
+
+#### Calculating Pearson's correaltion on all participant time series files stored in resid_ts
+#Calculate the correlation 
+for (x in names(resid_ts)) {
+  corr= resid_ts[[x]] <- cor(resid_ts[[x]], method = "pearson")
+} 
+
+#Next, must preform a Fisher transformation on the matrices 
+install.packages("DescTools") 
+library(DescTools)
+
+for (p in names(resid_ts)){
+  zt = resid_ts[[p]] <- FisherZ(resid_ts[[p]])
+  resid_ts[[p]][is.infinite(resid_ts[[p]])] <-NA
+}
+
+#Extracting the lower triangle of the matrix and vectorizing
+for (p in names(resid_ts)){
+  lower.tri(resid_ts[[p]], diag=FALSE)
+  resid_ts[[p]][lower.tri(resid_ts[[p]])] <-NA 
+  vt = resid_ts[[p]] <-as.vector(t(resid_ts[[p]]))
+  vt1 = resid_ts[[p]] <- resid_ts[[p]][!is.na(resid_ts[[p]])]
+
+}
+
+#Get all participant vectors into one dataframe 
+v_resid_ts <- resid_ts
+matrixf<- as.data.frame(do.call(rbind, v_resid_ts))
+
+#### Running neuroComBat to account for scanner effects 
+##Install that package 
+install.packages("devtools")
+library(devtools)
+install_github("jfortin1/neuroCombatData")
+install_github("jfortin1/neuroCombat_Rpackage")
+
+# run ComBat on connectivity data to harmonize across scanners
+library(neuroCombat)
+
+#Must transpose so that the participants are in the columns and the correlation values are the rows 
+matrixf_2 <- as.matrix(matrixf) #first convert to a matrix, and then transpose 
+matrixf_1 <- t(matrixf_2)
+
+# dat is a data matrix of the data to harmonize - rows are features (connections) and columns are participants
+rs_corrs_com <- matrixf_1
+
+###Import data to be used as design matrix 
+add_data <- read.csv("/mnt/tigrlab/projects/tsecara/QCandInclusion/SPINS_finalregression_RS_reorderd.csv")
+add_data$diagnostic_group <- as.factor(add_data$diagnostic_group)
+add_data$scanner <- as.factor(add_data$scanner)
+
+# mod is a design matrix specifying biological covariates that should be protected - here diagnosis, age, sex, and cog variables
+modcombat <- model.matrix(~diagnostic_group +sex + age +
+                            avg_fd_RS + scog_mean_ea + simulation + mentalizing + wtar_std_score + scog_iri_total + np_domain_tscore_process_speed +
+                            np_domain_tscore_att_vigilance + np_domain_tscore_work_mem +np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning
+                          + np_domain_tscore_reasoning_ps + np_domain_tscore_social_cog + bsfs_sec1_total + bsfs_sec2_total + bsfs_sec3_total +
+                            bsfs_sec4_total + bsfs_sec5_total + bsfs_sec6_total, data=add_data)
+
+# R run ComBat
+# batch is a vector (length should be equal to the number of columns in the data matrix) that specifies the id for the batch, site, or scanner to correct for
+rs_combat <- neuroCombat(dat=rs_corrs_com, batch=c(add_data$scanner), mod=modcombat)
+
+
+# transpose the harmonized data matrix
+rs_combat_data <- t(rs_combat$dat.combat)
+
+# identify top 10% most variable connections as measured by median absolute deviation to reduce number of connectivity inputs (more robust against outliers than standard deviation as per Xia et al., 2018)
+mad_conn <- apply(rs_combat_data, 2, mad)
+# 76636*.1 = 7664
+top_10 <- names(sort(mad_conn, decreasing=TRUE)[1:7664])
+# create separate X and Y matrices
+conn_top_10 <- colnames(rs_combat_data[,colnames(rs_combat_data) %in% top_10])
+conn <- as.matrix(rs_combat_data[,colnames(rs_combat_data) %in% top_10]) # x var
+
+#Going to sort based on diagnostic group
+TS_data3 <- cbind(add_data[c("diagnostic_group")], conn)
+
+#sort the data by diagnostic group, in decreasing order to ensure that controls are first 
+sorted_TS_data1 <-TS_data3[order(TS_data3$diagnostic_group, decreasing = TRUE),]
+sorted_TS_data2 <- sorted_TS_data1
+sorted_TS_data2 <- sorted_TS_data2[,-1]
+
+##### Calculating pairwise correlational distance - global variabiltiy score
+#pairwise distance measure 0 to 1, 0 is less distance = more similar, 1 is more distance = less similar
+corr2 = rdist::pdist(sorted_TS_data2, metric = "correlation")
+distance = rowMeans(corr2,na.rm = TRUE) #Row means taken to determine mean correlational distance per participant
+distance = as.data.frame(distance)
+write.csv(distance, "/mnt/tigrlab/projects/tsecara/SPINS_Project_1/New_data_P1/FULLMATcordis_RS.csv") #saved as CSV for later use
+
+##### Visualization for pairwise correlational distance SSD vs TDC 
+#Load libraries 
+library(tidyverse)
+
+corrdf = as.data.frame(corr2)
+#rows belong to TDC vs. SSD, and add unique identifier (to make sure sorting properly)
+rownames(corrdf) <- paste(c(rep('TDC', 155), rep('SSD', 191)), seq(1:nrow(corrdf)), sep='_')
+colnames(corrdf) <- rownames(corrdf)
+
+TDC_df <- corrdf[grepl('TDC', rownames(corrdf)),grepl('TDC', colnames(corrdf))]
+SSD_df <- corrdf[grepl('SSD', rownames(corrdf)),grepl('SSD', colnames(corrdf))]
+
+#get order of HC/SSD columns by decreasing//increasing columnsum value
+TDC_order <- colnames(TDC_df[order(colSums(corrdf[, names(corrdf) %in% names(TDC_df)]), decreasing=T)])
+SSD_order <- colnames(SSD_df[order(colSums(corrdf[, names(corrdf) %in% names(SSD_df)]))])
+order <- c(TDC_order, SSD_order)
+corrdf_1 <- corrdf[order,order]
+
+#MAKE PLOT
+#set custom colour scale, for plot
+myColours <- colorRampPalette(c("white", "darkblue", "springgreen"))
+#make sure corrmat is a matrix, for plotting
+corrdf_1 <- as.matrix(corrdf_1)
+
+#Need to melt data back into a data frame to use in ggplot for heat map
+install.packages("reshape")
+library("reshape")
+newcorr1= melt.array(corrdf_1)
+
+#Visualization of pairwise correlational distance using heat map
+install.packages("ggplot2")
+library("ggplot2")
+
+ggp <- ggplot(newcorr1, aes(X1, X2)) + 
+  geom_tile(aes(fill=value))
+ggp
+
+myColours <- colorRampPalette(c("darkblue", "springgreen"))
+ggp + scale_fill_gradientn(limits= c(0.43, 0.67), colors=myColours(100)) + geom_rect(aes(xmin = 1, xmax = 155, ymin = 1, ymax = 155), colour = "black", fill = NA) + geom_rect(aes(xmin = 156, xmax = 346, ymin = 156, ymax =346), colour = "black", fill = NA)
 
