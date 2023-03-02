@@ -1,1 +1,132 @@
+# Running Various Hierarchical Regressions
+#First, must load in the csv containing participant data (demographics, mean correlational distance values, and social cogntive and neurcogntive scores)
+data <- read.csv("/Users/teosecara/Desktop/SPINS_data/SPINS_final_regressiondata_UPDATED_reg.csv")#Empathic Accuracy background connectivity data
+data2 <- read.csv("/Users/teosecara/Desktop/SPINS_data/SPINS_final_regressiondata_UPDATED_r_RS_2.csv") #Resting State data
+
+install.packages("car")
+library('carData')
+library('car')
+library('rms')
+library('lattice')
+library("ggplot2")
+
+####Hierarchical Regression 
+### FOR the EA TASK BACKGROUND CONNECITVITY
+model1 <-lm(cordis_csc_t10 ~ age + sex + avg_fd + scanner, data = data)
+summary(model1)
+car::Anova(model1)
+
+model2 <- lm(cordis_csc_t10 ~ age + sex + avg_fd + scanner + mentalizing, data = data)
+summary(model2)
+car::Anova(model2)
+
+model3 <- lm(cordis_csc_t10 ~ age + sex + avg_fd + scanner + mentalizing +scog_iri_empathic_concern, data = data)
+summary(model3)
+car::Anova(model3)
+
+model4 <- lm(cordis_csc_t10 ~ age + sex + avg_fd + scanner + mentalizing +scog_iri_empathic_concern +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps, data = data)
+summary(model4)
+car::Anova(model4)
+
+model5 <- lm(cordis_csc_t10 ~ age + sex + avg_fd + scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps, data = data)
+summary(model5)
+car::Anova(model5)
+
+model6 <- lm(cordis_csc_t10 ~ age + sex + avg_fd + scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps
+             + bsfs_sec1_total + bsfs_sec2_total + bsfs_sec3_total + bsfs_sec4_total + bsfs_sec5_total+ bsfs_sec6_total , data = data)
+summary(model6)
+car::Anova(model6)
+
+model7 <- lm(cordis_csc_t10 ~ age + sex + avg_fd + scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps
+             + bsfs_sec1_total + bsfs_sec2_total + bsfs_sec3_total + bsfs_sec4_total + bsfs_sec5_total+ bsfs_sec6_total + diagnostic_group, data = data)
+summary(model7)
+car::Anova(model7)
+
+model8 <- lm(cordis_csc_t10 ~ age*sex + age*diagnostic_group  + diagnostic_group*mentalizing + sex*diagnostic_group + sex*mentalizing + avg_fd+ scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps 
+               + bsfs_sec1_total + bsfs_sec2_total + bsfs_sec3_total + bsfs_sec4_total + bsfs_sec5_total+ bsfs_sec6_total + diagnostic_group, data = data)
+summary(model8)
+car::Anova(model8)
+car::Anova(model8, type = 'III')
+
+
+#RUNNING ANOVAS for the models 
+
+anova(model1, model2, model3, model4, model5, model6, model7, model8)
+
+anova(model1, model2)
+
+anova(model2, model3)
+
+anova(model3, model4)
+
+anova(model4, model5)
+
+anova(model5, model6)
+
+anova(model6, model7)
+
+anova(model7, model8)
+
+
+###FOR RESTING STATE 
+####Hierarchial Regression 
+#### for the RESTING STATE FUNCTIONAL CONNECTIVITY
+model1 <-lm(cordis_csc_t10_RS ~ age + sex + avg_fd_RS + scanner, data = data2)
+summary(model1)
+car::Anova(model1)
+
+model2 <- lm(cordis_csc_t10_RS ~ age + sex + avg_fd_RS + scanner + mentalizing, data = data2)
+summary(model2)
+car::Anova(model2)
+
+model3 <- lm(cordis_csc_t10_RS ~ age + sex + avg_fd_RS + scanner + mentalizing +scog_iri_empathic_concern, data = data2)
+summary(model3)
+car::Anova(model3)
+
+model4 <- lm(cordis_csc_t10_RS ~ age + sex + avg_fd_RS + scanner + mentalizing +scog_iri_empathic_concern +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps, data = data2)
+summary(model4)
+car::Anova(model4)
+
+model5 <- lm(cordis_csc_t10_RS ~ age + sex + avg_fd_RS + scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps, data = data2)
+summary(model5)
+car::Anova(model5)
+
+model6 <- lm(cordis_csc_t10_RS ~ age + sex + avg_fd_RS + scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps
+             + bsfs_sec1_total + bsfs_sec2_total + bsfs_sec3_total + bsfs_sec4_total + bsfs_sec5_total+ bsfs_sec6_total , data = data2)
+summary(model6)
+car::Anova(model6)
+
+model7 <- lm(cordis_csc_t10_RS ~ age + sex + avg_fd_RS + scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps
+             + bsfs_sec1_total + bsfs_sec2_total + bsfs_sec3_total + bsfs_sec4_total + bsfs_sec5_total+ bsfs_sec6_total + diagnostic_group, data = data2)
+summary(model7)
+car::Anova(model7)
+
+model8 <- lm(cordis_csc_t10_RS ~ age*sex + age*diagnostic_group  + diagnostic_group*mentalizing + sex*diagnostic_group + sex*mentalizing + avg_fd_RS + scanner + mentalizing +scog_iri_empathic_concern + wtar_std_score +np_domain_tscore_process_speed + np_domain_tscore_att_vigilance + np_domain_tscore_work_mem+ np_domain_tscore_verbal_learning + np_domain_tscore_visual_learning + np_domain_tscore_reasoning_ps
+             + bsfs_sec1_total + bsfs_sec2_total + bsfs_sec3_total + bsfs_sec4_total + bsfs_sec5_total+ bsfs_sec6_total + diagnostic_group, data = data2)
+summary(model8)
+car::Anova(model8)
+car::Anova(model8, type = 'III')
+
+#Running ANOVAs for the models 
+
+anova(model1, model2, model3, model4, model5, model6, model7, model8)
+
+anova(model1, model2)
+
+anova(model2, model3)
+
+anova(model3, model4)
+
+anova(model4, model5)
+
+anova(model5, model6)
+
+anova(model6, model7)
+
+anova(model7, model8)
+
+#Violin Plots of Data 
+ggp1 <- ggplot(data, aes(y=cordis_csc_t10, x= diagnostic_group, colour=diagnostic_group)) + 
+  geom_violin(trim=FALSE) + ylim(0.44,0.62) + geom_boxplot(width=0.1) + labs(title="Correlational Distance (TOP 10 Vairable Connections)",x="Diganostic Group", y = "Mean Correlational Distance") + scale_color_manual(values=c("springgreen","darkgreen"))
+ggp1 + stat_summary(fun=median, geom="point", shape=23, size=2) 
 
